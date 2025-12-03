@@ -278,23 +278,65 @@
     }
 
     // ---- "AI" Parser placeholder ----
-    // For now, we parse simple lines: DATE DESCRIPTION... AMOUNT
-    function fakeOcrAndParser(text) {
-      const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-      const out = [];
-      for (const line of lines) {
-        const parts = line.split(/\s+/);
-        if (parts.length < 2) continue;
-        let amount = parseFloat(parts[parts.length - 1].replace(/[^0-9.-]/g, ''));
-        if (isNaN(amount)) continue;
-        const maybeDate = parts[0];
-        const descParts = parts.slice(1, parts.length - 1);
-        const date = isValidDate(maybeDate) ? maybeDate : null;
-        const description = (date ? descParts : parts.slice(0, parts.length - 1)).join(' ');
-        out.push({ date, description, amount });
-      }
-      return out;
+// Tries to find real transactions: line must contain a date + amount-looking value.
+function fakeOcrAndParser(text) {
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const out = [];
+
+  for (const line of lines) {
+    // Look for an amount at the END of the line: e.g., 123.45, $123.45, -45.67
+    const amountMatch = line.match(/(-?\$?\s?\d[\d,]*\.?\d{0,2})\s*$/);
+    if (!amountMatch) continue;
+
+    const amountStr = amountMatch[1];
+    const amount = parseFloat(amountStr.replace(/[^0-9.-]/g, ''));
+    if (isNaN(amount)) continue;
+
+    // Remove the amount part from the line to get the date + description region
+    const withoutAmount = line.slice(0, line.length - amountMatch[0].length).trim();
+
+    // Try to find a date anywhere in that region: 2025-01-02 or 01/02/2025 or 1/2/25
+    const dateMatch = withoutAmount.match(/(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{2,4})/);
+    let date = null;
+    let description = withoutAmount;
+
+    if (dateMatch) {
+      const rawDate = dateMatch[1];
+      date = normalizeDate(rawDate);
+      // description = everything except the date string
+      description = (withoutAmount.replace(rawDate, '')).trim();
     }
+
+    // Skip very short / nonsense descriptions
+    if (!description || description.length < 3) continue;
+
+    out.push({ date, description, amount });
+  }
+
+  return out;
+}
+
+// Normalize dates to YYYY-MM-DD where possible
+function normalizeDate(raw) {
+  raw = raw.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    // already YYYY-MM-DD
+    return raw;
+  }
+  // formats like MM/DD/YY or MM/DD/YYYY
+  const m = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (!m) return null;
+  let [_, mm, dd, yy] = m;
+  mm = mm.padStart(2, '0');
+  dd = dd.padStart(2, '0');
+  if (yy.length === 2) {
+    // naive assumption: 00-69 => 2000s, 70-99 => 1900s
+    const n = parseInt(yy, 10);
+    yy = (n < 70 ? 2000 + n : 1900 + n).toString();
+  }
+  return `${yy}-${mm}-${dd}`;
+}
+
 
     function isValidDate(str) {
       // very simple: yyyy-mm-dd
