@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>AI-Assisted Budget Tracker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-50 min-h-screen">
+  <div class="max-w-6xl mx-auto p-4 md:p-8">
+    <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
+      <div>
+        <h1 class="text-2xl md:text-3xl font-bold tracking-tight">AI-Assisted Budget Tracker</h1>
+        <p class="text-sm text-slate-400">Personal budgeting with smart categorization and learning.</p>
+      </div>
+      <div class="flex items-center gap-2 text-xs text-slate-400">
+        <label class="flex items-center gap-1">
+          Month:
+          <input id="monthInput" type="month" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs" />
+        </label>
+        <span id="summaryChip" class="hidden md:inline-flex items-center px-2 py-1 rounded-full bg-slate-900 border border-slate-700 text-xs"></span>
+      </div>
+    </header>
+
+    <!-- Tabs -->
+    <nav class="flex gap-2 mb-6 text-sm">
+      <button data-tab="scan" class="tab-btn px-3 py-2 rounded-xl bg-slate-800 border border-slate-600">Scan Statements</button>
+      <button data-tab="transactions" class="tab-btn px-3 py-2 rounded-xl bg-slate-900 border border-slate-700">Transactions</button>
+      <button data-tab="budget" class="tab-btn px-3 py-2 rounded-xl bg-slate-900 border border-slate-700">Budget Plan</button>
+    </nav>
+
+    <!-- Scan Statements -->
+    <section id="tab-scan" class="tab-panel">
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl p-4">
+          <h2 class="font-semibold mb-2">1. Upload statement</h2>
+          <p class="text-xs text-slate-400 mb-3">
+            For now, this demo uses a simple text parser. In a future version, this is where you’d connect OCR + AI to read PDFs or images.
+          </p>
+          <label class="block text-xs mb-2">Upload file (image or PDF – placeholder only)</label>
+          <input id="statementFile" type="file" accept="image/*,application/pdf" class="block w-full text-xs mb-4" />
+          <p class="text-xs text-slate-400 mb-2">Or paste statement text (one transaction per line):</p>
+          <textarea id="rawTextInput" rows="8" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs"
+            placeholder="Example format (one per line):
+2025-01-02 Grocery Store 45.67
+2025-01-03 Netflix 15.99
+2025-01-04 Shell Gas 62.10"></textarea>
+          <button id="analyzeBtn" class="mt-3 px-3 py-2 rounded-xl bg-emerald-500 text-slate-950 text-sm font-medium">
+            Analyze & Import
+          </button>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl p-4">
+          <h2 class="font-semibold mb-2">2. Detected transactions</h2>
+          <p class="text-xs text-slate-400 mb-2">Review what was parsed before saving.</p>
+          <div id="scanResult" class="text-xs max-h-80 overflow-auto border border-slate-800 rounded-lg p-2 bg-slate-950"></div>
+          <button id="saveImportedBtn" class="mt-3 px-3 py-2 rounded-xl bg-indigo-500 text-slate-950 text-sm font-medium hidden">
+            Save to Transactions
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Transactions -->
+    <section id="tab-transactions" class="tab-panel hidden">
+      <div class="bg-slate-900 border border-slate-700 rounded-2xl p-4">
+        <div class="flex flex-wrap items-center gap-2 mb-3 text-xs">
+          <span class="font-semibold text-sm">Transactions</span>
+          <span class="text-slate-400">for <span id="currentMonthLabel"></span></span>
+          <div class="flex items-center gap-2 ml-auto">
+            <label class="flex items-center gap-1">
+              <input id="showAllMonths" type="checkbox" class="accent-emerald-500" />
+              Show all months
+            </label>
+          </div>
+        </div>
+        <div class="overflow-auto max-h-[480px] border border-slate-800 rounded-xl">
+          <table class="min-w-full text-xs">
+            <thead class="bg-slate-900 border-b border-slate-800">
+              <tr>
+                <th class="px-2 py-1 text-left">Date</th>
+                <th class="px-2 py-1 text-left">Description</th>
+                <th class="px-2 py-1 text-right">Amount</th>
+                <th class="px-2 py-1 text-left">Category</th>
+                <th class="px-2 py-1 text-left">Source</th>
+                <th class="px-2 py-1 text-left">AI?</th>
+                <th class="px-2 py-1"></th>
+              </tr>
+            </thead>
+            <tbody id="transactionsBody" class="divide-y divide-slate-800 bg-slate-950"></tbody>
+          </table>
+        </div>
+        <p class="mt-2 text-[11px] text-slate-400">
+          Tip: changing categories teaches the app. It will reuse your choices for similar descriptions in future imports.
+        </p>
+      </div>
+    </section>
+
+    <!-- Budget Plan -->
+    <section id="tab-budget" class="tab-panel hidden">
+      <div class="bg-slate-900 border border-slate-700 rounded-2xl p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-semibold">Budget Plan</h2>
+          <button id="addCategoryBtn" class="px-2 py-1 rounded-lg bg-slate-800 border border-slate-600 text-xs">
+            + Add Category
+          </button>
+        </div>
+        <div class="overflow-auto max-h-[480px] border border-slate-800 rounded-xl">
+          <table class="min-w-full text-xs">
+            <thead class="bg-slate-900 border-b border-slate-800">
+              <tr>
+                <th class="px-2 py-1 text-left">Category</th>
+                <th class="px-2 py-1 text-right">Budgeted / Month</th>
+                <th class="px-2 py-1 text-center">Rollover?</th>
+                <th class="px-2 py-1 text-right">Spent (current month)</th>
+                <th class="px-2 py-1 text-right">Remaining</th>
+                <th class="px-2 py-1"></th>
+              </tr>
+            </thead>
+            <tbody id="budgetBody" class="divide-y divide-slate-800 bg-slate-950"></tbody>
+          </table>
+        </div>
+        <p class="mt-2 text-[11px] text-slate-400">
+          Rollover: if checked, unspent amounts carry into the next month; if not, each month resets.
+        </p>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    // ---- Storage Keys ----
+    const STORAGE_KEYS = {
+      transactions: 'ai_budget_transactions_v1',
+      budget: 'ai_budget_budget_v1',
+      rules: 'ai_budget_rules_v1'
+    };
+
+    // ---- State ----
+    let transactions = loadFromStorage(STORAGE_KEYS.transactions, []);
+    let budgetPlan = loadFromStorage(STORAGE_KEYS.budget, {});
+    let categoryRules = loadFromStorage(STORAGE_KEYS.rules, {}); // description pattern -> category
+    let pendingImported = [];
+
+    // ---- Elements ----
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const tabPanels = document.querySelectorAll('.tab-panel');
+    const monthInput = document.getElementById('monthInput');
+    const summaryChip = document.getElementById('summaryChip');
+    const currentMonthLabel = document.getElementById('currentMonthLabel');
+    const showAllMonths = document.getElementById('showAllMonths');
+
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const statementFile = document.getElementById('statementFile');
+    const rawTextInput = document.getElementById('rawTextInput');
+    const scanResult = document.getElementById('scanResult');
+    const saveImportedBtn = document.getElementById('saveImportedBtn');
+
+    const transactionsBody = document.getElementById('transactionsBody');
+    const budgetBody = document.getElementById('budgetBody');
+    const addCategoryBtn = document.getElementById('addCategoryBtn');
+
+    // ---- Init ----
+    monthInput.value = currentMonthIso();
+    updateMonthLabel();
+    renderAll();
+
+    // ---- Tab switching ----
+    tabButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        tabButtons.forEach(b => b.classList.remove('bg-slate-800', 'border-slate-600'));
+        btn.classList.add('bg-slate-800', 'border-slate-600');
+        tabPanels.forEach(p => p.classList.toggle('hidden', p.id !== 'tab-' + tab));
+      });
+    });
+
+    // ---- Events ----
+    monthInput.addEventListener('change', () => {
+      updateMonthLabel();
+      renderAll();
+    });
+    showAllMonths.addEventListener('change', renderTransactions);
+
+    analyzeBtn.addEventListener('click', () => {
+      const text = rawTextInput.value.trim();
+      if (!text) {
+        notify('Paste some statement text to parse.');
+        return;
+      }
+      pendingImported = fakeOcrAndParser(text);
+      renderScanPreview();
+    });
+
+    saveImportedBtn.addEventListener('click', () => {
+      if (!pendingImported.length) return;
+      const currentMonth = monthInput.value || currentMonthIso();
+      const enriched = pendingImported.map(tr => {
+        const id = crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random());
+        const category = autoCategorize(tr.description);
+        return {
+          id,
+          date: tr.date || deriveDateFromMonth(currentMonth),
+          description: tr.description,
+          amount: tr.amount,
+          category,
+          source: 'Imported',
+          month: monthFromDate(tr.date || deriveDateFromMonth(currentMonth)),
+          aiCategory: !!category,
+        };
+      });
+      transactions.push(...enriched);
+      saveToStorage(STORAGE_KEYS.transactions, transactions);
+      pendingImported = [];
+      scanResult.innerHTML = '';
+      saveImportedBtn.classList.add('hidden');
+      notify('Imported transactions saved.');
+      renderAll();
+      switchToTab('transactions');
+    });
+
+    addCategoryBtn.addEventListener('click', () => {
+      const name = prompt('New category name (e.g. Groceries):');
+      if (!name) return;
+      const norm = name.trim();
+      if (!norm) return;
+      if (budgetPlan[norm]) {
+        alert('Category already exists.');
+        return;
+      }
+      budgetPlan[norm] = { amount: 0, rollover: false };
+      saveToStorage(STORAGE_KEYS.budget, budgetPlan);
+      renderBudget();
+    });
+
+    // ---- Core helpers ----
+    function loadFromStorage(key, fallback) {
+      try {
+        const val = localStorage.getItem(key);
+        return val ? JSON.parse(val) : fallback;
+      } catch {
+        return fallback;
+      }
+    }
+    function saveToStorage(key, value) {
+      localStorage.setItem(key, JSON.stringify(value));
+    }
+    function currentMonthIso() {
+      const d = new Date();
+      return d.toISOString().slice(0, 7);
+    }
+    function monthFromDate(dateStr) {
+      if (!dateStr) return currentMonthIso();
+      return dateStr.slice(0, 7);
+    }
+    function updateMonthLabel() {
+      const val = monthInput.value || currentMonthIso();
+      const [y, m] = val.split('-');
+      currentMonthLabel.textContent = `${y}-${m}`;
+    }
+
+    function switchToTab(name) {
+      tabButtons.forEach(b => {
+        const is = b.dataset.tab === name;
+        b.classList.toggle('bg-slate-800', is);
+        b.classList.toggle('border-slate-600', is);
+        b.classList.toggle('bg-slate-900', !is);
+        b.classList.toggle('border-slate-700', !is);
+      });
+      tabPanels.forEach(p => p.classList.toggle('hidden', p.id !== 'tab-' + name));
+    }
+
+    function notify(msg) {
+      const n = document.createElement('div');
+      n.textContent = msg;
+      n.className = 'fixed bottom-4 right-4 px-3 py-2 rounded-xl bg-slate-900 text-slate-50 text-xs border border-slate-700 shadow';
+      document.body.appendChild(n);
+      setTimeout(() => n.remove(), 2000);
+    }
+
+    // ---- "AI" Parser placeholder ----
+    // For now, we parse simple lines: DATE DESCRIPTION... AMOUNT
+    function fakeOcrAndParser(text) {
+      const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      const out = [];
+      for (const line of lines) {
+        const parts = line.split(/\s+/);
+        if (parts.length < 2) continue;
+        let amount = parseFloat(parts[parts.length - 1].replace(/[^0-9.-]/g, ''));
+        if (isNaN(amount)) continue;
+        const maybeDate = parts[0];
+        const descParts = parts.slice(1, parts.length - 1);
+        const date = isValidDate(maybeDate) ? maybeDate : null;
+        const description = (date ? descParts : parts.slice(0, parts.length - 1)).join(' ');
+        out.push({ date, description, amount });
+      }
+      return out;
+    }
+
+    function isValidDate(str) {
+      // very simple: yyyy-mm-dd
+      return /^\d{4}-\d{2}-\d{2}$/.test(str);
+    }
+
+    function deriveDateFromMonth(monthIso) {
+      // default to 1st of month
+      return monthIso + '-01';
+    }
+
+    function renderScanPreview() {
+      if (!pendingImported.length) {
+        scanResult.innerHTML = '<div class="text-slate-500">Nothing parsed yet.</div>';
+        saveImportedBtn.classList.add('hidden');
+        return;
+      }
+      const html = pendingImported.map(tr => {
+        const cat = autoCategorize(tr.description) || '(uncategorized)';
+        return `<div class="flex justify-between gap-2 py-1 border-b border-slate-800">
+          <div>
+            <div>${escapeHtml(tr.description)}</div>
+            <div class="text-[11px] text-slate-500">${tr.date || '(no date)'} · ${cat}</div>
+          </div>
+          <div class="font-mono">${tr.amount.toFixed(2)}</div>
+        </div>`;
+      }).join('');
+      scanResult.innerHTML = html;
+      saveImportedBtn.classList.remove('hidden');
+    }
+
+    // ---- Categorization & learning ----
+    function normalizeDesc(desc) {
+      return (desc || '').toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+    }
+
+    function autoCategorize(description) {
+      const norm = normalizeDesc(description);
+      // simple rule: if any rule key is a substring of description, use that category
+      for (const [pattern, cat] of Object.entries(categoryRules)) {
+        if (norm.includes(pattern)) return cat;
+      }
+      // heuristic fallbacks based on keywords
+      if (/grocery|supermarket|market|whole foods|kroger|aldi|trader/.test(norm)) return 'Groceries';
+      if (/uber|lyft|taxi|ride/.test(norm)) return 'Transport';
+      if (/shell|chevron|bp|gas|fuel/.test(norm)) return 'Gas';
+      if (/netflix|hulu|disney|spotify|prime video/.test(norm)) return 'Subscriptions';
+      if (/rent|mortgage/.test(norm)) return 'Housing';
+      if (/target|walmart|costco/.test(norm)) return 'General Shopping';
+      if (/doordash|ubereats|grubhub|restaurant|cafe|coffee|starbucks/.test(norm)) return 'Eating Out';
+      return null;
+    }
+
+    function learnFromCorrection(description, newCategory) {
+      const norm = normalizeDesc(description);
+      if (!norm || !newCategory) return;
+      // use a short pattern: first 2-3 words
+      const words = norm.split(/\s+/).slice(0, 3);
+      const pattern = words.join(' ');
+      categoryRules[pattern] = newCategory;
+      saveToStorage(STORAGE_KEYS.rules, categoryRules);
+    }
+
+    // ---- Render Transactions ----
+    function renderTransactions() {
+      transactionsBody.innerHTML = '';
+      if (!transactions.length) {
+        transactionsBody.innerHTML = `<tr><td colspan="7" class="px-2 py-3 text-center text-slate-500 text-xs">No transactions yet.</td></tr>`;
+        return;
+      }
+      const month = monthInput.value || currentMonthIso();
+      const rows = transactions
+        .filter(tr => showAllMonths.checked || tr.month === month)
+        .sort((a,b) => (a.date || '').localeCompare(b.date || ''));
+      if (!rows.length) {
+        transactionsBody.innerHTML = `<tr><td colspan="7" class="px-2 py-3 text-center text-slate-500 text-xs">No transactions for this month.</td></tr>`;
+        return;
+      }
+      for (const tr of rows) {
+        const trEl = document.createElement('tr');
+        trEl.innerHTML = `
+          <td class="px-2 py-1 whitespace-nowrap">${escapeHtml(tr.date || '')}</td>
+          <td class="px-2 py-1">${escapeHtml(tr.description)}</td>
+          <td class="px-2 py-1 text-right font-mono">${tr.amount.toFixed(2)}</td>
+          <td class="px-2 py-1">
+            <input type="text" value="${escapeHtml(tr.category || '')}"
+              class="w-32 bg-slate-900 border border-slate-700 rounded px-1 py-0.5 text-xs category-input" />
+          </td>
+          <td class="px-2 py-1 text-slate-400">${escapeHtml(tr.source || '')}</td>
+          <td class="px-2 py-1">${tr.aiCategory ? '✓' : ''}</td>
+          <td class="px-2 py-1 text-right">
+            <button class="text-[10px] text-rose-400 hover:text-rose-300 delete-btn">✕</button>
+          </td>
+        `;
+        const catInput = trEl.querySelector('.category-input');
+        catInput.addEventListener('change', () => {
+          tr.category = catInput.value.trim() || null;
+          learnFromCorrection(tr.description, tr.category);
+          saveToStorage(STORAGE_KEYS.transactions, transactions);
+          renderBudget(); // update budget view
+        });
+        trEl.querySelector('.delete-btn').addEventListener('click', () => {
+          if (confirm('Delete this transaction?')) {
+            transactions = transactions.filter(t => t.id !== tr.id);
+            saveToStorage(STORAGE_KEYS.transactions, transactions);
+            renderAll();
+          }
+        });
+        transactionsBody.appendChild(trEl);
+      }
+    }
+
+    // ---- Render Budget Plan ----
+    function renderBudget() {
+      budgetBody.innerHTML = '';
+      const month = monthInput.value || currentMonthIso();
+      // spending per category for current month
+      const spendingMap = {};
+      for (const tr of transactions) {
+        if (tr.month !== month) continue;
+        if (!tr.category) continue;
+        spendingMap[tr.category] = (spendingMap[tr.category] || 0) + tr.amount;
+      }
+      const categories = Object.keys(budgetPlan).sort();
+      if (!categories.length) {
+        budgetBody.innerHTML = `<tr><td colspan="6" class="px-2 py-3 text-center text-slate-500 text-xs">
+          No budget categories yet. Click “+ Add Category” to start.</td></tr>`;
+        return;
+      }
+      for (const name of categories) {
+        const cfg = budgetPlan[name];
+        const spent = spendingMap[name] || 0;
+        const remaining = (cfg.amount || 0) - spent;
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td class="px-2 py-1">
+            <input type="text" value="${escapeHtml(name)}"
+              class="bg-slate-900 border border-slate-700 rounded px-1 py-0.5 text-xs w-32 cat-name" />
+          </td>
+          <td class="px-2 py-1 text-right">
+            <input type="number" step="0.01" value="${cfg.amount || 0}"
+              class="bg-slate-900 border border-slate-700 rounded px-1 py-0.5 text-xs w-20 text-right cat-amount" />
+          </td>
+          <td class="px-2 py-1 text-center">
+            <input type="checkbox" ${cfg.rollover ? 'checked' : ''} class="rollover-toggle accent-emerald-500" />
+          </td>
+          <td class="px-2 py-1 text-right font-mono">${spent.toFixed(2)}</td>
+          <td class="px-2 py-1 text-right font-mono ${remaining < 0 ? 'text-rose-400' : ''}">
+            ${remaining.toFixed(2)}
+          </td>
+          <td class="px-2 py-1 text-right">
+            <button class="text-[10px] text-rose-400 hover:text-rose-300 remove-cat">✕</button>
+          </td>
+        `;
+        const nameInput = row.querySelector('.cat-name');
+        const amountInput = row.querySelector('.cat-amount');
+        const rolloverToggle = row.querySelector('.rollover-toggle');
+        const removeBtn = row.querySelector('.remove-cat');
+
+        nameInput.addEventListener('change', () => {
+          const newName = nameInput.value.trim();
+          if (!newName || newName === name) return;
+          if (budgetPlan[newName]) {
+            alert('Category with that name already exists.');
+            nameInput.value = name;
+            return;
+          }
+          budgetPlan[newName] = { ...cfg };
+          delete budgetPlan[name];
+          saveToStorage(STORAGE_KEYS.budget, budgetPlan);
+          renderBudget();
+        });
+
+        amountInput.addEventListener('change', () => {
+          const val = parseFloat(amountInput.value || '0');
+          cfg.amount = isNaN(val) ? 0 : val;
+          saveToStorage(STORAGE_KEYS.budget, budgetPlan);
+          renderBudget();
+        });
+
+        rolloverToggle.addEventListener('change', () => {
+          cfg.rollover = rolloverToggle.checked;
+          saveToStorage(STORAGE_KEYS.budget, budgetPlan);
+        });
+
+        removeBtn.addEventListener('click', () => {
+          if (confirm('Remove this category from your plan?')) {
+            delete budgetPlan[name];
+            saveToStorage(STORAGE_KEYS.budget, budgetPlan);
+            renderBudget();
+          }
+        });
+
+        budgetBody.appendChild(row);
+      }
+    }
+
+    // ---- Summary chip ----
+    function renderSummary() {
+      const month = monthInput.value || currentMonthIso();
+      const monthTx = transactions.filter(tr => tr.month === month);
+      if (!monthTx.length) {
+        summaryChip.classList.add('hidden');
+        return;
+      }
+      const total = monthTx.reduce((sum, t) => sum + t.amount, 0);
+      const budgetTotal = Object.values(budgetPlan).reduce((sum, b) => sum + (b.amount || 0), 0);
+      summaryChip.textContent = `Month spend: $${total.toFixed(2)} · Budgeted: $${budgetTotal.toFixed(2)}`;
+      summaryChip.classList.remove('hidden');
+    }
+
+    // ---- Shared helpers ----
+    function escapeHtml(str) {
+      return String(str || '').replace(/[&<>"']/g, ch => ({
+        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+      }[ch]));
+    }
+
+    function renderAll() {
+      renderTransactions();
+      renderBudget();
+      renderSummary();
+    }
+  </script>
+</body>
+</html>
