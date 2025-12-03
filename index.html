@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Budget Copilot</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <header class="top-bar">
+      <div class="brand">
+        <div class="logo">🤖</div>
+        <div>
+          <p class="eyebrow">Personal AI</p>
+          <h1>Budget Copilot</h1>
+        </div>
+      </div>
+      <div class="status-chip" id="learning-status">Learning from your edits</div>
+    </header>
+
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-tab="scan" role="tab" aria-selected="true">
+        Scan documents
+      </button>
+      <button class="tab" data-tab="transactions" role="tab" aria-selected="false">
+        Transactions
+      </button>
+      <button class="tab" data-tab="budget" role="tab" aria-selected="false">
+        Budget plan
+      </button>
+    </nav>
+
+    <main>
+      <section id="scan" class="panel active" role="tabpanel">
+        <div class="panel-header">
+          <div>
+            <p class="eyebrow">Capture</p>
+            <h2>Upload and auto-categorize statements</h2>
+          </div>
+          <p class="hint">Drop images or PDFs to simulate AI text extraction.</p>
+        </div>
+        <div class="upload-box" id="drop-zone">
+          <input type="file" id="statement-input" accept="image/*,.pdf" />
+          <div class="upload-copy">
+            <p class="eyebrow">Scan documents</p>
+            <h3>Drag & drop monthly statements</h3>
+            <p>Budget Copilot will read totals, add transactions, and guess categories.</p>
+            <button id="upload-button" class="primary">Select a file</button>
+          </div>
+        </div>
+        <div id="scan-results" class="card"></div>
+      </section>
+
+      <section id="transactions" class="panel" role="tabpanel" aria-hidden="true">
+        <div class="panel-header">
+          <div>
+            <p class="eyebrow">Review</p>
+            <h2>Transactions</h2>
+          </div>
+          <div class="pill">AI learns from your corrections.</div>
+        </div>
+        <div id="transactions-table" class="card"></div>
+      </section>
+
+      <section id="budget" class="panel" role="tabpanel" aria-hidden="true">
+        <div class="panel-header">
+          <div>
+            <p class="eyebrow">Plan</p>
+            <h2>Budget plan</h2>
+          </div>
+          <div class="pill">Set monthly targets and rollover rules.</div>
+        </div>
+        <div class="budget-grid">
+          <div class="card" id="budget-form"></div>
+          <div class="card" id="budget-summary"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>Built for personal use — data stays in your browser.</p>
+    </footer>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
