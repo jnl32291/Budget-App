@@ -31,34 +31,30 @@
 
     <!-- Scan Statements -->
     <section id="tab-scan" class="tab-panel">
-      <div class="grid md:grid-cols-2 gap-6">
-        <div class="bg-slate-900 border border-slate-700 rounded-2xl p-4">
-          <h2 class="font-semibold mb-2">1. Upload statement</h2>
-          <p class="text-xs text-slate-400 mb-3">
-            For now, this demo uses a simple text parser. In a future version, this is where you’d connect OCR + AI to read PDFs or images.
-          </p>
-          <label class="block text-xs mb-2">Upload file (image or PDF – placeholder only)</label>
-          <input id="statementFile" type="file" accept="image/*,application/pdf" class="block w-full text-xs mb-4" />
-          <p class="text-xs text-slate-400 mb-2">Or paste statement text (one transaction per line):</p>
-          <textarea id="rawTextInput" rows="8" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs"
-            placeholder="Example format (one per line):
-2025-01-02 Grocery Store 45.67
-2025-01-03 Netflix 15.99
-2025-01-04 Shell Gas 62.10"></textarea>
-          <button id="analyzeBtn" class="mt-3 px-3 py-2 rounded-xl bg-emerald-500 text-slate-950 text-sm font-medium">
-            Analyze & Import
-          </button>
-        </div>
+      <div class="bg-slate-900 border border-slate-700 rounded-2xl p-4">
+  <h2 class="font-semibold mb-2">1. Upload statement</h2>
+  <p class="text-xs text-slate-400 mb-3">
+    For now, this uses text parsing. In a future version, the file upload will use real OCR/AI to read images and PDFs.
+  </p>
 
-        <div class="bg-slate-900 border border-slate-700 rounded-2xl p-4">
-          <h2 class="font-semibold mb-2">2. Detected transactions</h2>
-          <p class="text-xs text-slate-400 mb-2">Review what was parsed before saving.</p>
-          <div id="scanResult" class="text-xs max-h-80 overflow-auto border border-slate-800 rounded-lg p-2 bg-slate-950"></div>
-          <button id="saveImportedBtn" class="mt-3 px-3 py-2 rounded-xl bg-indigo-500 text-slate-950 text-sm font-medium hidden">
-            Save to Transactions
-          </button>
-        </div>
-      </div>
+  <label class="block text-xs mb-2">Upload file (image, PDF, or text – placeholder for now)</label>
+  <input id="statementFile" type="file" accept="image/*,application/pdf,text/plain,.txt,.csv"
+    class="block w-full text-xs mb-4" />
+
+  <p class="text-xs text-slate-400 mb-2">Or paste statement / CSV text (one transaction per line):</p>
+  <textarea id="rawTextInput" rows="8"
+    class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs"
+    placeholder="Example format (one per line):
+2025-01-02 Grocery Store 45.67
+01/03/25 Netflix 15.99
+01/04/25 SHELL GAS STATION 62.10">
+  </textarea>
+
+  <button id="analyzeBtn" class="mt-3 px-3 py-2 rounded-xl bg-emerald-500 text-slate-950 text-sm font-medium">
+    Analyze &amp; Import
+  </button>
+</div>
+
     </section>
 
     <!-- Transactions -->
